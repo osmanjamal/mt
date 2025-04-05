@@ -1,0 +1,6 @@
+Flask
+flask[async]
+requests
+datetime
+pandas
+mt5linux
