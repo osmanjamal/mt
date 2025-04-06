@@ -1,21 +1,27 @@
-from main import app
+from main import app, binance_trader
 from flask import render_template, request, redirect, url_for, flash
 import config
 import importlib
 from functions import *
 import pandas as pd
+import logging
+
+# إعداد التسجيل لتتبع الأخطاء والعمليات
+logger = logging.getLogger("BinanceBot_Routes")
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+    """
+    مسار تسجيل الدخول للمشرف
+    """
     error = ''
 
     if request.method == 'POST':
         if request.form.get('username') != config.admin_username or \
                 request.form.get('password') != config.admin_password:
-            error = 'Invalid Credentials. Please try again.'
-            flash(format('Invalid credentials. Please try again.'), 'error')
+            error = 'بيانات غير صحيحة. الرجاء المحاولة مرة أخرى.'
+            flash(format('بيانات غير صحيحة. الرجاء المحاولة مرة أخرى.'), 'error')
         else:
-            #auth_data = request.form.to_dict(flat=True)
             write('auth.txt', 'authenticated')
             write('ip_address.txt', ip_address())
             return redirect(url_for('index'))
@@ -23,12 +29,18 @@ def login():
 
 @app.route('/logout', methods=['POST', 'GET'])
 def logout():
+    """
+    مسار تسجيل الخروج
+    """
     write('auth.txt', 'unauthenticated')
     write('ip_address.txt', '')
     return redirect(url_for('login'))
 
 @app.route('/', methods=['GET'])
 def main():
+    """
+    المسار الرئيسي، يتحقق من المصادقة
+    """
     auth_session = read('auth.txt')
     ip_session = str(read('ip_address.txt'))
     ip_add = ip_address()
@@ -37,8 +49,11 @@ def main():
     else:
         return redirect(url_for('index'))
 
-@app.route('/password_reset',methods=['POST'])
+@app.route('/password_reset', methods=['POST'])
 def reset_password():
+    """
+    مسار إعادة تعيين كلمة المرور
+    """
     if request.method == 'POST':
         admin_username = request.form.get('current_username')
         old_pass = request.form.get('current_password')
@@ -46,29 +61,36 @@ def reset_password():
         if admin_username == config.admin_username:
             if old_pass == config.admin_password:
                 config.admin_password = new_pass
-                with open('config.py', 'r') as f:
+                with open('config.py', 'r', encoding='utf-8') as f:
                     config_contents = f.read()
                 new_config_contents = config_contents.replace(
                     f"admin_password = '{old_pass}'", f"admin_password = '{new_pass}'")
-                with open('config.py', 'w') as f:
+                with open('config.py', 'w', encoding='utf-8') as f:
                     f.write(new_config_contents)
-                    flash(format('Admin Password Changed Successfuly'), 'success')
-
+                    flash(format('تم تغيير كلمة مرور المشرف بنجاح'), 'success')
             else:
-                flash(format('Current Admin Password Is Not Valid'), 'error')
+                flash(format('كلمة المرور الحالية غير صحيحة'), 'error')
         else:
-            flash(format('Admin Username Is Not Valid'), 'error')
+            flash(format('اسم المستخدم غير صحيح'), 'error')
     return redirect(url_for('change_password'))
 
 @app.route('/change_password', methods=['GET', 'POST'])
-def change_password():        
-    pass
+def change_password():
+    """
+    مسار صفحة تغيير كلمة المرور
+    """
+    auth_session = read('auth.txt')
+    ip_session = str(read('ip_address.txt'))
+    ip_add = ip_address()
+    if auth_session != 'authenticated' or ip_session != ip_add:
+        return redirect(url_for('login'))
     return render_template('change_password.html')
 
-
-
 @app.route('/dashboard', methods=['GET', 'POST'])
-async def index():
+def index():
+    """
+    مسار لوحة التحكم الرئيسية
+    """
     auth_session = read('auth.txt')
     ip_session = str(read('ip_address.txt'))
     ip_add = ip_address()
@@ -77,200 +99,394 @@ async def index():
         return redirect(url_for('login'))
     
     if request.method == 'POST':
+        script_type = request.form.get('script_type', "")
         quantity = request.form.get('qty', "")
         symbol = request.form.get('symbol', "")
         alert_type = request.form.get('alert_type', "")
-    
-        if alert_type == 'BUY':
-            syntax = '{</br>"symbol": ' + '"' + symbol + '",\
-                        </br>"qty": ' + '"' + quantity + '",\
-                        </br>"action": "buy",\
-                        </br>"market_position": "long",\
-                        </br>"price": "{{close}}"</br>''}'
+        tp_i = request.form.get('tp_distance', "0")
+        sl_i = request.form.get('sl_distance', "0")
 
-        elif alert_type == 'SELL':
+        if script_type == 'INDICATOR':
+            if alert_type == 'BUY':
+                syntax = '{</br>"symbol": ' + '"' + symbol + '",\
+                            </br>"qty": ' + '"' + quantity + '",\
+                            </br>"action": "buy",\
+                            </br>"market_position": "long",\
+                            </br>"tp": ' + '"' + tp_i + '",\
+                            </br>"sl": ' + '"' + sl_i + '",\
+                            </br>"price": "{{close}}"</br>''}'
+
+            elif alert_type == 'SELL':
+                syntax = '{</br>"symbol": ' + '"' + symbol + '",\
+                            </br>"qty": ' + '"' + quantity + '",\
+                            </br>"action": "sell",\
+                            </br>"market_position": "short",\
+                            </br>"tp": ' + '"' + tp_i + '",\
+                            </br>"sl": ' + '"' + sl_i + '",\
+                            </br>"price": "{{close}}"</br>''}'
+                
+        elif script_type == 'STRATEGY':
             syntax = '{</br>"symbol": ' + '"' + symbol + '",\
-                        </br>"qty": ' + '"' + quantity + '",\
-                        </br>"action": "sell",\
-                        </br>"market_position": "short",\
-                        </br>"price": "{{close}}"</br>''}'
+                    </br>"qty": ' + '"' + quantity + '",\
+                    </br>"action": "{{strategy.order.action}}",\
+                    </br>"market_position": "{{strategy.market_position}}",\
+                    </br>"tp": ' + '"' + tp_i + '",\
+                    </br>"sl": ' + '"' + sl_i + '",\
+                    </br>"price": "{{close}}"</br>''}'
 
         return render_template('index.html', syntax=syntax)
     else:
         return render_template('index.html')
 
-
 @app.route('/signals', methods=['GET', 'POST'])
-async def signals():
-  auth_session = read('auth.txt')
-  ip_session = str(read('ip_address.txt'))
-  ip_add = ip_address()
+def signals():
+    """
+    مسار عرض سجل الإشارات
+    """
+    auth_session = read('auth.txt')
+    ip_session = str(read('ip_address.txt'))
+    ip_add = ip_address()
+        
+    if auth_session != 'authenticated' or ip_session != ip_add:
+        return redirect(url_for('login'))
     
-  if auth_session != 'authenticated' or ip_session != ip_add:
-    return redirect(url_for('login'))
-  with open('signals.json', 'r') as f:
-    trade_data = json.load(f)
-    df = pd.DataFrame(
-      trade_data,
-      columns=['order_time', 'symbol', 'action', 'entry', 'qty', 'qty_type'])
-    df.rename(columns={
-      'order_time': 'TIME',
-      'symbol': 'SYMBOL',
-      'action': 'SIDE',
-      'qty': 'QTY',
-      'entry': 'ENTRY',
-      # 'tp': 'TP',
-      # 'sl': 'SL',
-      'qty_type': 'ACCOUNT'
-    },
-              inplace=True)
-    df = df.sort_values(by="TIME", ascending=False)
-    #print(df)
+    try:
+        with open('signals.json', 'r') as f:
+            trade_data = json.load(f)
+            df = pd.DataFrame(
+                trade_data,
+                columns=['order_time', 'symbol', 'action', 'entry', 'tp', 'sl', 'qty', 'qty_type'])
+            df.rename(columns={
+                'order_time': 'التوقيت',
+                'symbol': 'الرمز',
+                'action': 'الاتجاه',
+                'qty': 'الكمية',
+                'entry': 'سعر الدخول',
+                'tp': 'جني الأرباح',
+                'sl': 'وقف الخسارة',
+                'qty_type': 'نوع الحساب'
+            }, inplace=True)
+            df = df.sort_values(by="التوقيت", ascending=False)
+    except Exception as e:
+        logger.error(f"خطأ في قراءة ملف الإشارات: {e}")
+        df = pd.DataFrame(columns=['التوقيت', 'الرمز', 'الاتجاه', 'الكمية', 'سعر الدخول', 'جني الأرباح', 'وقف الخسارة', 'نوع الحساب'])
 
-  return render_template('signals.html',
-                         tables=[df.to_html(classes='data')],
-                         titles=df.columns.values)
-
+    return render_template('signals.html',
+                            tables=[df.to_html(classes='data')],
+                            titles=df.columns.values)
 
 @app.route('/trades', methods=['GET', 'POST'])
-async def trades():
-  auth_session = read('auth.txt')
-  ip_session = str(read('ip_address.txt'))
-  ip_add = ip_address()
+def trades():
+    """
+    مسار عرض سجل الصفقات
+    """
+    auth_session = read('auth.txt')
+    ip_session = str(read('ip_address.txt'))
+    ip_add = ip_address()
 
-  if auth_session != 'authenticated' or ip_session != ip_add:
-    return redirect(url_for('login'))
-  with open('trades.json', 'r') as f:
-    trade_data = json.load(f)
-    df = pd.DataFrame(
-      trade_data,
-      columns=['order_time', 'order_id', 'symbol', 'action', 'price', 'qty'])
-    df.rename(columns={
-      'order_time': 'TIME',
-      'order_id': 'ORDER ID',
-      'symbol': 'SYMBOL',
-      'action': 'SIDE',
-      'qty': 'QTY',
-      'price': 'PRICE'
-    },
-              inplace=True)
-    df = df.sort_values(by="TIME", ascending=False)
-    #print(df)
+    if auth_session != 'authenticated' or ip_session != ip_add:
+        return redirect(url_for('login'))
+    
+    try:
+        with open('trades.json', 'r') as f:
+            trade_data = json.load(f)
+            df = pd.DataFrame(
+                trade_data,
+                columns=['order_time', 'order_id', 'symbol', 'action', 'price', 'qty'])
+            df.rename(columns={
+                'order_time': 'التوقيت',
+                'order_id': 'رقم الطلب',
+                'symbol': 'الرمز',
+                'action': 'الاتجاه',
+                'qty': 'الكمية',
+                'price': 'السعر'
+            }, inplace=True)
+            df = df.sort_values(by="التوقيت", ascending=False)
+    except Exception as e:
+        logger.error(f"خطأ في قراءة ملف الصفقات: {e}")
+        df = pd.DataFrame(columns=['التوقيت', 'رقم الطلب', 'الرمز', 'الاتجاه', 'الكمية', 'السعر'])
 
-  return render_template('trades.html',
-                         tables=[df.to_html(classes='data')],
-                         titles=df.columns.values)
+    return render_template('trades.html',
+                            tables=[df.to_html(classes='data')],
+                            titles=df.columns.values)
 
 @app.route('/max_loss_settings', methods=['GET', 'POST'])
 def max_loss_settings():
-  auth_session = read('auth.txt')
-  ip_session = str(read('ip_address.txt'))
-  ip_add = ip_address()
+    """
+    مسار إعدادات الحد الأقصى للخسارة
+    """
+    auth_session = read('auth.txt')
+    ip_session = str(read('ip_address.txt'))
+    ip_add = ip_address()
 
-  if auth_session != 'authenticated' or ip_session != ip_add:
-    return redirect(url_for('login'))
-  max_loss_value = read('max_loss_value.txt')
-  if len(max_loss_value) > 0:
-    max_loss_value = max_loss_value
-  else:
-    max_loss_value = 0
-
-  if request.method == 'POST':
-    max_loss_value = request.form.get('max_loss', "")
+    if auth_session != 'authenticated' or ip_session != ip_add:
+        return redirect(url_for('login'))
+    
+    max_loss_value = read('max_loss_value.txt')
     if len(max_loss_value) > 0:
-      write('max_loss_value.txt',max_loss_value)
-    if max_loss_value == '':
-      max_loss_value = 0
-    return render_template('settings.html',max_loss_value=max_loss_value)
+        max_loss_value = max_loss_value
+    else:
+        max_loss_value = 0
 
-  return render_template('settings.html',max_loss_value=max_loss_value)
+    if request.method == 'POST':
+        max_loss_value = request.form.get('max_loss', "")
+        if len(max_loss_value) > 0:
+            write('max_loss_value.txt', max_loss_value)
+        if max_loss_value == '':
+            max_loss_value = 0
+        return render_template('settings.html', max_loss_value=max_loss_value)
+
+    return render_template('settings.html', max_loss_value=max_loss_value)
 
 @app.route('/reset_max_loss', methods=['GET', 'POST'])
 def reset_max_loss():
-  auth_session = read('auth.txt')
-  ip_session = str(read('ip_address.txt'))
-  ip_add = ip_address()
+    """
+    مسار إعادة تعيين الحد الأقصى للخسارة
+    """
+    auth_session = read('auth.txt')
+    ip_session = str(read('ip_address.txt'))
+    ip_add = ip_address()
 
-  if auth_session != 'authenticated' or ip_session != ip_add:
-    return redirect(url_for('login'))
-  if request.method == 'POST':
-    write('max_loss.txt','')
+    if auth_session != 'authenticated' or ip_session != ip_add:
+        return redirect(url_for('login'))
+    
+    if request.method == 'POST':
+        write('max_loss.txt', '')
+        return redirect(url_for('max_loss_settings'))
 
-    return redirect(url_for('max_loss_settings'))
-
-def get_display_data(value, default='NO'):
+def get_display_data(value, default='لا يوجد'):
+    """
+    تنسيق البيانات للعرض مع إخفاء جزء منها
+    """
     if len(value) > 0:
         return value[:len(value) - 5] + '************'
     else:
         return default
 
-@app.route('/api_settings', methods=['GET', 'POST'])
-def api_settings():
+@app.route('/binance_settings', methods=['GET', 'POST'])
+def binance_settings():
+    """
+    مسار إعدادات API بايننس - جديد
+    """
     auth_session = read('auth.txt')
     ip_session = str(read('ip_address.txt'))
     ip_add = ip_address()
 
     if auth_session != 'authenticated' or ip_session != ip_add:
         return redirect(url_for('login'))
+    
     importlib.reload(config)
 
-    login = config.login
-    half_lenght = int((len(str(config.password))/2)*1.25)
-    password = config.password[:len(str(config.password))-half_lenght] + '************'
-    server = config.server
+    # جلب الإعدادات الحالية من ملف config
+    api_key = getattr(config, 'binance_api_key', '')
+    api_secret = getattr(config, 'binance_api_secret', '')
+    account_type = getattr(config, 'account_type', 'futures')
+    leverage = getattr(config, 'leverage', 10)
+    testnet = getattr(config, 'binance_testnet', False)
 
-    return render_template('add_api.html',login=login,password=password,server=server)
-
-
-def process_value(value, account_number):
-    if len(str(value)) > 0:
-        return value[:len(str(value))-5] + '************'
+    # إخفاء جزء من المفاتيح السرية للعرض
+    if api_key:
+        display_api_key = api_key[:5] + '********' + api_key[-5:] if len(api_key) > 10 else '********'
     else:
-        return f'NO_VALUE_FOUND_{account_number}'
+        display_api_key = ''
+    
+    display_api_secret = '************************' if api_secret else ''
 
+    return render_template('binance_settings.html',
+                          api_key=display_api_key,
+                          api_secret=display_api_secret,
+                          account_type=account_type,
+                          leverage=leverage,
+                          testnet=testnet)
 
-
-@app.route('/add_metaapi_<int:account_number>', methods=['GET', 'POST'])
-def add_metaapi(account_number):
+@app.route('/add_binance_api', methods=['POST'])
+def add_binance_api():
+    """
+    مسار إضافة/تحديث بيانات API بايننس - جديد
+    """
     auth_session = read('auth.txt')
     ip_session = str(read('ip_address.txt'))
     ip_add = ip_address()
 
     if auth_session != 'authenticated' or ip_session != ip_add:
         return redirect(url_for('login'))
-    importlib.reload(config)
-    
-    token_key = f'token_{account_number}'
-    account_id_key = f'account_id_{account_number}'
     
     if request.method == 'POST':
-        login = request.form.get('login')
-        password = request.form.get('password')
-        server = request.form.get('server')
+        api_key = request.form.get('api_key', '')
+        api_secret = request.form.get('api_secret', '')
+        account_type = request.form.get('account_type', 'futures')
+        leverage = request.form.get('leverage', '10')
+        testnet = request.form.get('testnet', 'False') == 'True'
         
-        if len(login) > 0 and len(password) > 0 and len(server) > 0:
-            update_config('login = ', login, 'password = ', password, 'server = ', server)
-            # importlib.reload(login)
-    return redirect(url_for('api_settings'))
-
-@app.route('/add_api_telegram_<int:account_number>', methods=['GET', 'POST'])
-def add_api_telegram(account_number):
-    auth_session = read('auth.txt')
-    ip_session = str(read('ip_address.txt'))
-    ip_add = ip_address()
-
-    if auth_session != 'authenticated' or ip_session != ip_add:
-        return redirect(url_for('login'))
-    importlib.reload(config)
-    
-    tg_token_key = f'tg_token_{account_number}'
-    tg_channel_key = f'tg_channel_{account_number}'
-    
-    if request.method == 'POST':
-        tg_token = request.form.get('tg_token')
-        tg_channel = request.form.get('tg_channel')
-        
-        if len(tg_token) > 0 and len(tg_channel) > 0:
-            update_config(f'{tg_token_key} = ', tg_token, f'{tg_channel_key} = ', tg_channel)
+        # تحديث ملف الإعدادات
+        try:
+            with open('config.py', 'r', encoding='utf-8') as file:
+                lines = file.readlines()
             
-    return redirect(url_for('api_settings'))
+            # البحث عن الإعدادات الحالية أو إضافتها إذا لم تكن موجودة
+            has_api_key = has_api_secret = has_account_type = has_leverage = has_testnet = False
+            modified_lines = []
+            
+            for line in lines:
+                if line.startswith('binance_api_key = '):
+                    if api_key:  # تحديث فقط إذا تم إدخال قيمة جديدة
+                        modified_lines.append(f"binance_api_key = '{api_key}'\n")
+                    else:
+                        modified_lines.append(line)
+                    has_api_key = True
+                elif line.startswith('binance_api_secret = '):
+                    if api_secret:  # تحديث فقط إذا تم إدخال قيمة جديدة
+                        modified_lines.append(f"binance_api_secret = '{api_secret}'\n")
+                    else:
+                        modified_lines.append(line)
+                    has_api_secret = True
+                elif line.startswith('account_type = '):
+                    modified_lines.append(f"account_type = '{account_type}'\n")
+                    has_account_type = True
+                elif line.startswith('leverage = '):
+                    modified_lines.append(f"leverage = {leverage}\n")
+                    has_leverage = True
+                elif line.startswith('binance_testnet = '):
+                    modified_lines.append(f"binance_testnet = {testnet}\n")
+                    has_testnet = True
+                else:
+                    modified_lines.append(line)
+            
+            # إضافة الإعدادات التي لم تكن موجودة
+            if not has_api_key and api_key:
+                modified_lines.append(f"binance_api_key = '{api_key}'\n")
+            if not has_api_secret and api_secret:
+                modified_lines.append(f"binance_api_secret = '{api_secret}'\n")
+            if not has_account_type:
+                modified_lines.append(f"account_type = '{account_type}'\n")
+            if not has_leverage:
+                modified_lines.append(f"leverage = {leverage}\n")
+            if not has_testnet:
+                modified_lines.append(f"binance_testnet = {testnet}\n")
+            
+            # كتابة التعديلات للملف
+            with open('config.py', 'w', encoding='utf-8') as file:
+                file.writelines(modified_lines)
+            
+            flash(format('تم تحديث إعدادات بايننس بنجاح'), 'success')
+            
+            # إعادة تهيئة BinanceTrader
+            try:
+                importlib.reload(config)
+                binance_trader.__init__()
+                if binance_trader.initialize():
+                    flash(format('تم الاتصال ببايننس بنجاح'), 'success')
+                else:
+                    flash(format('فشل الاتصال ببايننس، تحقق من البيانات'), 'error')
+            except Exception as e:
+                flash(format(f'خطأ في إعادة الاتصال ببايننس: {str(e)}'), 'error')
+                logger.error(f"خطأ في إعادة تهيئة BinanceTrader: {e}")
+        
+        except Exception as e:
+            flash(format(f'خطأ في تحديث الإعدادات: {str(e)}'), 'error')
+            logger.error(f"خطأ في تحديث ملف config.py: {e}")
+    
+    return redirect(url_for('binance_settings'))
+
+@app.route('/balance_info', methods=['GET'])
+def balance_info():
+    """
+    مسار عرض معلومات الرصيد في بايننس - جديد
+    """
+    auth_session = read('auth.txt')
+    ip_session = str(read('ip_address.txt'))
+    ip_add = ip_address()
+
+    if auth_session != 'authenticated' or ip_session != ip_add:
+        return redirect(url_for('login'))
+    
+    try:
+        # جلب معلومات الحساب من بايننس
+        if binance_trader.client:
+            if binance_trader.account_type == 'futures':
+                account = binance_trader.client.futures_account()
+                
+                # استخراج البيانات المهمة
+                balance_data = {
+                    'نوع الحساب': 'العقود المستقبلية',
+                    'الرصيد الكلي': f"{float(account['totalWalletBalance']):.8f} USDT",
+                    'الهامش المتاح': f"{float(account['availableBalance']):.8f} USDT",
+                    'الهامش المستخدم': f"{float(account['totalMaintMargin']):.8f} USDT",
+                    'الربح/الخسارة المفتوحة': f"{float(account['totalUnrealizedProfit']):.8f} USDT",
+                }
+                
+                # استخراج المراكز المفتوحة
+                positions = []
+                for pos in account['positions']:
+                    if float(pos['positionAmt']) != 0:
+                        pos_data = {
+                            'الرمز': pos['symbol'],
+                            'الاتجاه': 'شراء' if float(pos['positionAmt']) > 0 else 'بيع',
+                            'الكمية': abs(float(pos['positionAmt'])),
+                            'سعر الدخول': float(pos['entryPrice']),
+                            'السعر الحالي': float(pos['markPrice']),
+                            'الربح/الخسارة': float(pos['unrealizedProfit']),
+                            'الرافعة المالية': pos['leverage'],
+                        }
+                        positions.append(pos_data)
+            else:
+                # للتداول الفوري
+                account = binance_trader.client.get_account()
+                
+                # استخراج البيانات المهمة
+                balances = []
+                for balance in account['balances']:
+                    free = float(balance['free'])
+                    locked = float(balance['locked'])
+                    if free > 0 or locked > 0:
+                        # محاولة الحصول على سعر العملة بالدولار
+                        try:
+                            if balance['asset'] != 'USDT':
+                                ticker = binance_trader.client.get_symbol_ticker(symbol=f"{balance['asset']}USDT")
+                                price = float(ticker['price'])
+                                value = (free + locked) * price
+                            else:
+                                price = 1
+                                value = free + locked
+                            
+                            balances.append({
+                                'العملة': balance['asset'],
+                                'المتاح': free,
+                                'المحجوز': locked,
+                                'الإجمالي': free + locked,
+                                'السعر بالدولار': price,
+                                'القيمة بالدولار': value
+                            })
+                        except:
+                            # إذا لم يمكن الحصول على السعر
+                            balances.append({
+                                'العملة': balance['asset'],
+                                'المتاح': free,
+                                'المحجوز': locked,
+                                'الإجمالي': free + locked,
+                                'السعر بالدولار': 'غير متاح',
+                                'القيمة بالدولار': 'غير متاح'
+                            })
+                
+                # حساب إجمالي القيمة بالدولار
+                total_value = sum([b['القيمة بالدولار'] for b in balances if isinstance(b['القيمة بالدولار'], (int, float))])
+                
+                balance_data = {
+                    'نوع الحساب': 'التداول الفوري',
+                    'إجمالي القيمة بالدولار': f"{total_value:.2f} USDT",
+                }
+                
+                # تحويل balances إلى جدول
+                positions = balances
+            
+            return render_template('balance_info.html',
+                                  balance_data=balance_data,
+                                  positions=positions)
+        else:
+            flash(format('لم يتم الاتصال ببايننس، تحقق من إعدادات API'), 'error')
+            return redirect(url_for('binance_settings'))
+    
+    except Exception as e:
+        flash(format(f'خطأ في جلب معلومات الرصيد: {str(e)}'), 'error')
+        logger.error(f"خطأ في جلب معلومات الرصيد: {e}")
+        return redirect(url_for('index'))

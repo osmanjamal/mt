@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>معلومات الرصيد</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
+</head>
+<body>
+   <center>
+      <ul class="navbar">
+        <li><a href="/">الرئيسية</a></li>
+        <li><a href="/signals">سجل الإشارات</a></li>
+        <li><a class="active" href="/balance_info">معلومات الرصيد</a></li>
+        <li><a href="/binance_settings">إعدادات بايننس</a></li>
+        <div style="display: flex; justify-content: flex-end;">
+          <li><a class="logout" href="/logout">تسجيل خروج</a></li>
+        </div>
+      </ul>
+    </center>
+
+    <div class="trans-box-header">
+        <center><h1>معلومات الرصيد والمراكز</h1></center>
+    </div>
+    
+    <div class="trans-box-body-dashboard">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                {% if category == 'error' %}
+                    <div class="flash-box-history-error">{{ message }}</div>
+                {% elif category == 'success' %}
+                    <div style="padding:10px; position: relative; left: 13%; margin-bottom:10px; border-radius:5px; border: solid white 1px; color:white; background-color: green; width: 70%; text-align: center;">{{ message }}</div>
+                {% else %}
+                    <div>{{ message }}</div>
+                {% endif %}
+            {% endfor %}
+        {% endif %}
+        {% endwith %}
+
+        <!-- قسم معلومات الرصيد -->
+        <div class="card" style="margin-bottom: 20px;">
+            <center><h3 class="trans-box-body" style="border-radius:5px;">معلومات الرصيد</h3></center>
+            <div class="code-box-info">
+                {% for key, value in balance_data.items() %}
+                <p><strong>{{ key }}:</strong> {{ value }}</p>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- قسم المراكز المفتوحة -->
+        <div class="card">
+            <center><h3 class="trans-box-body" style="border-radius:5px;">المراكز المفتوحة</h3></center>
+            <div class="code-box-info">
+                {% if positions and positions|length > 0 %}
+                <table style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr>
+                            {% for key in positions[0].keys() %}
+                            <th style="padding: 8px; text-align: right; border-bottom: 1px solid #ffffff2f;">{{ key }}</th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for position in positions %}
+                        <tr>
+                            {% for key, value in position.items() %}
+                            <td style="padding: 8px; text-align: right; border-bottom: 1px solid #ffffff2f;">
+                                {% if 'الربح' in key and value < 0 %}
+                                <span style="color: red;">{{ value }}</span>
+                                {% elif 'الربح' in key and value > 0 %}
+                                <span style="color: green;">{{ value }}</span>
+                                {% else %}
+                                {{ value }}
+                                {% endif %}
+                            </td>
+                            {% endfor %}
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <p>لا توجد مراكز مفتوحة حالياً</p>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- زر تحديث المعلومات -->
+        <div style="text-align: center; margin-top: 20px;">
+            <a href="{{ url_for('balance_info') }}"><button class="custom-button">تحديث المعلومات</button></a>
+        </div>
+    </div>
+</body>
+</html>

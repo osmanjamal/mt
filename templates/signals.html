@@ -1,52 +1,88 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Signal Logs</title>
+    <title>سجل الإشارات</title>
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
     <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
-
 </head>
 <body>
    <center>
       <ul class="navbar">
-        <li><a href="/">Home</a></li>
-        <li><a class="active" href="/signals">Signal Logs</a></li>
-        <li><a href="http://95.179.246.255:3000/" target="_blank">Open MT5</a></li>
-        <!--<li><a href="/max_loss_settings">Risk Settings</a></li>-->
-        <!--<li><a href="/api_settings">Add / Edit API</a></li>-->
+        <li><a href="/">الرئيسية</a></li>
+        <li><a class="active" href="/signals">سجل الإشارات</a></li>
+        <li><a href="/balance_info">معلومات الرصيد</a></li>
+        <li><a href="/binance_settings">إعدادات بايننس</a></li>
         <div style="display: flex; justify-content: flex-end;">
-          <li><a class="logout" href="/logout" >Logout</a></li>
+          <li><a class="logout" href="/logout">تسجيل خروج</a></li>
         </div>
       </ul>
     </center>
 
-
-    <div class="trans-box-header ">
-   
-   <center><h1>Webhook Signal Logs</h1></center>
-   </div>
-   <div class="trans-box-body-dashboard" style="background-color: rgba(0, 0, 0, 0.253);">
-      <style>
-         table {
-           width: 100%;
-           border-collapse: collapse;
-         }
-     
-         th, td {
-           padding: 8px;
-           text-align: left;
-           border-bottom: 1px solid #ffffff2f;
-         }
-     
-         th {
-           background-color: #00000044;
-         }
-       </style>
-   {% for table in tables %}
-   {{ table|safe }}
-   {% endfor %}
-   
-   
-   </div>
+    <div class="trans-box-header">
+        <center><h1>سجل إشارات Webhook</h1></center>
+    </div>
+    
+    <div class="trans-box-body-dashboard" style="background-color: rgba(0, 0, 0, 0.253);">
+        <style>
+            table {
+                width: 100%;
+                border-collapse: collapse;
+                direction: rtl;
+            }
+            
+            th, td {
+                padding: 8px;
+                text-align: right;
+                border-bottom: 1px solid #ffffff2f;
+            }
+            
+            th {
+                background-color: #00000044;
+            }
+            
+            tr:nth-child(even) {
+                background-color: rgba(0, 0, 0, 0.1);
+            }
+            
+            td:nth-child(3) {
+                font-weight: bold;
+            }
+            
+            .buy {
+                color: #4CAF50;
+            }
+            
+            .sell {
+                color: #F44336;
+            }
+        </style>
+        
+        {% for table in tables %}
+            <div style="overflow-x: auto;">
+                {{ table|safe }}
+            </div>
+        {% endfor %}
+        
+        <script>
+            // إضافة ألوان للإشارات (شراء باللون الأخضر وبيع باللون الأحمر)
+            document.addEventListener("DOMContentLoaded", function() {
+                var table = document.querySelector('table');
+                if (table) {
+                    var rows = table.querySelectorAll('tbody tr');
+                    rows.forEach(function(row) {
+                        var cells = row.querySelectorAll('td');
+                        if (cells.length > 2) {
+                            var action = cells[2].textContent.trim();
+                            if (action.toLowerCase() === 'buy' || action === 'شراء') {
+                                cells[2].classList.add('buy');
+                            } else if (action.toLowerCase() === 'sell' || action === 'بيع') {
+                                cells[2].classList.add('sell');
+                            }
+                        }
+                    });
+                }
+            });
+        </script>
+    </div>
 </body>
 </html>

@@ -3,4 +3,4 @@ flask[async]
 requests
 datetime
 pandas
-mt5linux
+python-binance

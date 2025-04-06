@@ -1,0 +1,30 @@
+2025-04-06 04:36:59,579 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:80
+ * Running on http://192.168.1.132:80
+2025-04-06 04:36:59,579 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
+2025-04-06 04:36:59,582 - werkzeug - INFO -  * Restarting with stat
+2025-04-06 04:37:04,067 - werkzeug - WARNING -  * Debugger is active!
+2025-04-06 04:37:04,079 - werkzeug - INFO -  * Debugger PIN: 667-012-891
+2025-04-06 04:38:03,056 - werkzeug - INFO - 127.0.0.1 - - [06/Apr/2025 04:38:03] "[33mGET / HTTP/1.1[0m" 404 -
+2025-04-06 04:38:03,342 - werkzeug - INFO - 127.0.0.1 - - [06/Apr/2025 04:38:03] "[33mGET /favicon.ico HTTP/1.1[0m" 404 -
+2025-04-06 04:38:05,912 - werkzeug - INFO - 127.0.0.1 - - [06/Apr/2025 04:38:05] "[33mGET / HTTP/1.1[0m" 404 -
+2025-04-06 04:38:18,748 - werkzeug - INFO - 192.168.1.132 - - [06/Apr/2025 04:38:18] "[33mGET / HTTP/1.1[0m" 404 -
+2025-04-06 04:38:18,881 - werkzeug - INFO - 192.168.1.132 - - [06/Apr/2025 04:38:18] "[33mGET /favicon.ico HTTP/1.1[0m" 404 -
+2025-04-06 04:41:22,559 - werkzeug - INFO - 192.168.1.132 - - [06/Apr/2025 04:41:22] "[33mGET / HTTP/1.1[0m" 404 -
+2025-04-06 04:44:38,316 - werkzeug - INFO - 127.0.0.1 - - [06/Apr/2025 04:44:38] "[33mGET /dashboard HTTP/1.1[0m" 404 -
+2025-04-06 04:45:39,906 - werkzeug - INFO - 192.168.1.132 - - [06/Apr/2025 04:45:39] "[33mGET /dashboard HTTP/1.1[0m" 404 -
+2025-04-06 04:46:35,032 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:80
+ * Running on http://192.168.1.132:80
+2025-04-06 04:46:35,032 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
+2025-04-06 04:46:35,043 - werkzeug - INFO -  * Restarting with stat
+2025-04-06 04:46:38,985 - werkzeug - WARNING -  * Debugger is active!
+2025-04-06 04:46:38,992 - werkzeug - INFO -  * Debugger PIN: 667-012-891
+2025-04-06 04:46:47,238 - werkzeug - INFO - 127.0.0.1 - - [06/Apr/2025 04:46:47] "[33mGET / HTTP/1.1[0m" 404 -
+2025-04-06 04:48:19,385 - werkzeug - INFO - 127.0.0.1 - - [06/Apr/2025 04:48:19] "[33mGET /dashboard HTTP/1.1[0m" 404 -
+2025-04-06 04:48:19,446 - werkzeug - INFO - 127.0.0.1 - - [06/Apr/2025 04:48:19] "[33mGET /favicon.ico HTTP/1.1[0m" 404 -
+2025-04-06 04:48:25,720 - werkzeug - INFO - 127.0.0.1 - - [06/Apr/2025 04:48:25] "[33mGET /api HTTP/1.1[0m" 404 -
+2025-04-06 04:49:29,717 - werkzeug - INFO - 192.168.1.132 - - [06/Apr/2025 04:49:29] "[33mGET / HTTP/1.1[0m" 404 -
+2025-04-06 04:49:33,943 - werkzeug - INFO - 192.168.1.132 - - [06/Apr/2025 04:49:33] "[33mGET /login HTTP/1.1[0m" 404 -

@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+   <head>
+      <title>إعدادات بايننس</title>
+      <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
+      <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
+   </head>
+   <body>
+      <center>
+         <ul class="navbar">
+            <li><a href="/">الرئيسية</a></li>
+            <li><a href="/signals">سجل الإشارات</a></li>
+            <li><a href="/balance_info">معلومات الرصيد</a></li>
+            <li><a class="active" href="/binance_settings">إعدادات بايننس</a></li>
+            <div style="display: flex; justify-content: flex-end;">
+              <li><a class="logout" href="/logout">تسجيل خروج</a></li>
+            </div>
+         </ul>
+      </center>
+      <div class="trans-box-header">
+         <center>
+            <h1>إعدادات Binance API</h1>
+         </center>
+      </div>
+
+      <div class="trans-box-body-dashboard" style="margin-top:20px;">
+         {% with messages = get_flashed_messages(with_categories=true) %}
+         {% if messages %}
+               {% for category, message in messages %}
+                  {% if category == 'error' %}
+                     <div class="flash-box-history-error">{{ message }}</div>
+                  {% elif category == 'success' %}
+                     <div style="padding:10px; position: relative; left: 13%; margin-bottom:10px; border-radius:5px; border: solid white 1px; color:white; background-color: green; width: 70%; text-align: center;">{{ message }}</div>
+                  {% else %}
+                     <div>{{ message }}</div>
+                  {% endif %}
+               {% endfor %}
+         {% endif %}
+         {% endwith %}
+
+         <div style="display: flex; width: 100%;justify-content: center;">
+            <div id="binance_api" class="card" style="flex: 1; margin-right: 10px;">
+               <center>
+                  <h3 class="trans-box-body" style="border-radius:5px;">إدخال بيانات API بايننس</h3>
+               </center>
+               <div class="card-inline">
+                  <form action="{{ url_for('add_binance_api') }}" method="POST">
+                     <div style="padding-top:20px";>
+                        <label for="api_key">مفتاح API (API Key)</label>
+                        <input type="text" name="api_key" id="api_key" placeholder="أدخل مفتاح API الخاص بك">
+                        
+                        <label for="api_secret">كلمة السر (API Secret)</label>
+                        <input type="password" name="api_secret" id="api_secret" placeholder="أدخل كلمة السر الخاصة بـ API">
+                        
+                        <label for="account_type">نوع الحساب</label>
+                        <select name="account_type" id="account_type">
+                           <option value="futures" {% if account_type == 'futures' %}selected{% endif %}>العقود المستقبلية (Futures)</option>
+                           <option value="spot" {% if account_type == 'spot' %}selected{% endif %}>التداول الفوري (Spot)</option>
+                        </select>
+                        
+                        <label for="leverage">الرافعة المالية (للعقود المستقبلية فقط)</label>
+                        <input type="text" name="leverage" id="leverage" value="{{ leverage }}" placeholder="مثال: 10">
+                        
+                        <label for="testnet">استخدام بيئة الاختبار</label>
+                        <select name="testnet" id="testnet">
+                           <option value="True" {% if testnet == True %}selected{% endif %}>نعم (للاختبار فقط)</option>
+                           <option value="False" {% if testnet == False %}selected{% endif %}>لا (للتداول الحقيقي)</option>
+                        </select>
+                        
+                        <input type="submit" value="حفظ الإعدادات">
+                     </div>
+                  </form>
+               </div>
+               
+               <center>
+                  <h3 class="trans-box-body" style="border-radius:5px; margin-top: 20px;">الإعدادات الحالية</h3>
+               </center>
+               <div class="code-box-info">
+                  <p>مفتاح API: {{ api_key if api_key else 'غير محدد' }}</p>
+                  <p>كلمة السر: {{ api_secret if api_secret else 'غير محددة' }}</p>
+                  <p>نوع الحساب: {{ 'العقود المستقبلية (Futures)' if account_type == 'futures' else 'التداول الفوري (Spot)' }}</p>
+                  <p>الرافعة المالية: {{ leverage }}</p>
+                  <p>بيئة الاختبار: {{ 'مفعلة' if testnet else 'غير مفعلة' }}</p>
+               </div>
+               
+               <div class="code-box-info" style="margin-top: 20px;">
+                  <h4>معلومات مهمة:</h4>
+                  <p>
+                     1. للحصول على مفاتيح API، قم بتسجيل الدخول إلى حساب بايننس، ثم انتقل إلى إدارة API.<br>
+                     2. عند إنشاء مفتاح API، تأكد من تفعيل صلاحيات القراءة والتداول.<br>
+                     3. يمكنك تقييد الوصول بواسطة عنوان IP للأمان الإضافي.<br>
+                     4. بيئة الاختبار تسمح لك بالتداول بأموال وهمية للتجربة قبل استخدام الأموال الحقيقية.<br>
+                     5. لا تشارك مفاتيح API مع أي شخص آخر أبداً.
+                  </p>
+               </div>
+            </div>
+         </div>
+      </div>
+   </body>
+</html>
